@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using EntityFramework.BulkExtensions.BulkOperations;
+using EntityFramework.BulkExtensions.Helpers;
 
 namespace EntityFramework.BulkExtensions.Extensions
 {
@@ -15,11 +16,12 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// </summary>
         /// <param name="context"></param>
         /// <param name="entities"></param>
+        /// <param name="columnDirection"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities) where T : class
+        public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities, ColumnDirection columnDirection = ColumnDirection.Input) where T : class
         {
-            throw new NotImplementedException();
+            return new BulkInsert().CommitTransaction(context, entities, columnDirection);
         }
 
         /// <summary>

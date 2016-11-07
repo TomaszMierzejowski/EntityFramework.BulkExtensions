@@ -28,14 +28,10 @@ namespace EntityFramework.BulkExtensions.Helpers
 
             command.Append($"CREATE TABLE {tableName}(");
 
-            var paramList = new List<string>();
             var primitiveTypes = context.GetPrimitiveType<T>();
-
-            foreach (var column in columns)
-            {
-                paramList.Add($"[{column.ColumnName}] {column.GetSchemaType(primitiveTypes[column.ColumnName])}");
-            }
-
+            var paramList = columns
+                .Select(column => $"[{column.ColumnName}] {column.GetSchemaType(primitiveTypes[column.ColumnName])}")
+                .ToList();
             var paramListConcatenated = string.Join(", ", paramList);
 
             command.Append(paramListConcatenated);
@@ -81,16 +77,16 @@ namespace EntityFramework.BulkExtensions.Helpers
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <param name="dt"></param>
+        /// <param name="dataTable"></param>
         /// <param name="tableName"></param>
         /// <param name="sqlBulkCopyOptions"></param>
-        internal static void InsertToTmpTable(this Database context, DataTable dt, string tableName, SqlBulkCopyOptions sqlBulkCopyOptions)
+        internal static void BulkInsertToTable(this Database context, DataTable dataTable, string tableName, SqlBulkCopyOptions sqlBulkCopyOptions)
         {
             using (var bulkcopy = new SqlBulkCopy((SqlConnection)context.Connection, sqlBulkCopyOptions, (SqlTransaction)context.CurrentTransaction.UnderlyingTransaction))
             {
                 bulkcopy.DestinationTableName = tableName;
                 bulkcopy.BulkCopyTimeout = context.Connection.ConnectionTimeout;
-                bulkcopy.WriteToServer(dt);
+                bulkcopy.WriteToServer(dataTable);
             }
         }
 
@@ -122,6 +118,11 @@ namespace EntityFramework.BulkExtensions.Helpers
             bulkcopy.BulkCopyTimeout = bulkCopyTimeout;
         }
 
+        internal static string GetDropTableCommand(string tableName)
+        {
+            return "DROP TABLE " + tableName + ";";
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -138,7 +139,7 @@ namespace EntityFramework.BulkExtensions.Helpers
 
             foreach (var column in tableColumns)
             {
-                //if (column.IsPk) continue;
+                if (column.IsPk) continue;
 
                 paramsSeparated.Add("[" + Constants.TargetAlias + "]" + "." + "[" + column.ColumnName + "]" + " = " + "[" + Constants.SourceAlias + "]" + "."
                                     + "[" + column.ColumnName + "]");
@@ -149,23 +150,86 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
-        internal static string BuildMatchPKs<T>(this DbContext context) where T : class
+        internal static string PrimaryKeysComparator<T>(this DbContext context) where T : class
         {
             var updateOn = context.GetTablePKs<T>().ToList();
             var command = new StringBuilder();
 
-            command.Append("ON " + "[" + Constants.TargetAlias + "]" + "." + "[" + updateOn[0] + "]" + " = " + "[" + Constants.SourceAlias + "]" + "."
-                + "[" + updateOn[0] + "]" + " ");
+            command.Append("ON " + "[" + Constants.TargetAlias + "]" + "." + "[" + updateOn.First() + "]" + " = " + "[" + Constants.SourceAlias + "]" + "."
+                + "[" + updateOn.First() + "]" + " ");
 
             if (updateOn.Count > 1)
             {
                 // Start from index 1 to just append "AND" conditions
-                for (var i = 1; i < updateOn.Count; i++)
+                foreach (var key in updateOn.Skip(1))
                 {
-                    command.Append("AND " + "[" + Constants.TargetAlias + "]" + "." + "[" + updateOn[i] + "]" + " = " + "[" +
-                        Constants.SourceAlias + "]" + "." + "[" + updateOn[i] + "]" + " ");
+                    command.Append("AND " + "[" + Constants.TargetAlias + "]" + "." + "[" + key + "]" + " = " + "[" +
+                        Constants.SourceAlias + "]" + "." + "[" + key + "]" + " ");
                 }
             }
+
+            return command.ToString();
+        }
+
+        internal static string GetInsertIntoStagingTableCmd<T>(this DbContext context, string tmpOutputTableName, string tmpTableName, string identityColumn, ColumnDirection outputIdentity) where T : class
+        {
+            var fullTableName = context.GetTableName<T>();
+            var columns = context.GetTableColumns<T>().Select(map => map.ColumnName).ToList();
+
+            var comm = GetOutputCreateTableCmd(outputIdentity, tmpOutputTableName,
+            OperationType.Insert, identityColumn) +
+            BuildInsertIntoSet(columns, identityColumn, fullTableName)
+            + "OUTPUT INSERTED.[" + identityColumn + "] INTO "
+            + tmpOutputTableName + "([" + identityColumn + "]) "
+            + BuildSelectSet(columns, Constants.SourceAlias, identityColumn)
+            + " FROM " + tmpTableName + " AS Source; " +
+            "DROP TABLE " + tmpTableName + ";";
+
+            return comm;
+        }
+
+        private static string BuildSelectSet(IEnumerable<string> columns, string sourceAlias, string identityColumn)
+        {
+            var command = new StringBuilder();
+            var selectColumns = new List<string>();
+            var values = new List<string>();
+
+            command.Append("SELECT ");
+
+            foreach (var column in columns.ToList())
+            {
+                if (identityColumn != null && column != identityColumn || identityColumn == null)
+                {
+                    if (column != Constants.InternalId)
+                    {
+                        selectColumns.Add("[" + sourceAlias + "].[" + column + "]");
+                        values.Add("[" + column + "]");
+                    }
+                }
+            }
+
+            command.Append(string.Join(", ", selectColumns));
+
+            return command.ToString();
+        }
+
+        private static string BuildInsertIntoSet(IEnumerable<string> columns, string identityColumn, string tableName)
+        {
+            var command = new StringBuilder();
+            var insertColumns = new List<string>();
+
+            command.Append("INSERT INTO ");
+            command.Append(tableName);
+            command.Append(" (");
+
+            foreach (var column in columns)
+            {
+                if (column != Constants.InternalId && column != identityColumn)
+                    insertColumns.Add("[" + column + "]");
+            }
+
+            command.Append(string.Join(", ", insertColumns));
+            command.Append(") ");
 
             return command.ToString();
         }
@@ -204,7 +268,7 @@ namespace EntityFramework.BulkExtensions.Helpers
             return string.Empty;
         }
 
-        internal static void LoadFromTmpOutputTable<T>(this Database context, string identityColumn, Dictionary<int, T> outputIdentityDic,
+        internal static void LoadFromTmpOutputTable<T>(this Database context, string tmpOutputTableName, string tmpTableName, string identityColumn, Dictionary<int, T> outputIdentityDic,
             OperationType operationType, IEnumerable<T> list)
         {
             if (operationType == OperationType.InsertOrUpdate
@@ -238,7 +302,7 @@ namespace EntityFramework.BulkExtensions.Helpers
 
             if (operationType == OperationType.Insert)
             {
-                var command = "SELECT " + identityColumn + " FROM " + Constants.TempOutputTableName + ";";
+                var command = "SELECT " + identityColumn + " FROM " + tmpOutputTableName + ";";
                 var identities = context.SqlQuery<int>(command);
 
                 var items = list.ToList();
@@ -257,7 +321,7 @@ namespace EntityFramework.BulkExtensions.Helpers
                     counter++;
                 }
 
-                //command = GetDropTmpTableCmd();
+                command = GetDropTableCommand(tmpOutputTableName);
                 context.ExecuteSqlCommand(command);
             }
         }

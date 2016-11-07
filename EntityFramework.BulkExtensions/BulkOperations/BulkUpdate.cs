@@ -13,7 +13,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
     /// <summary>
     /// 
     /// </summary>
-    public class BulkUpdate : ITransaction
+    public class BulkUpdate : IBulkOperation
     {
         /// <summary>
         /// 
@@ -47,7 +47,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                 database.ExecuteSqlCommand(command);
 
                 //Bulk insert into temp table
-                database.InsertToTmpTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
+                database.BulkInsertToTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
 
                 //command = SqlHelper.GetOutputCreateTableCmd(columnDirection, Constants.TempOutputTableName,
                 //OperationType.InsertOrUpdate, context.GetTablePKs<T>().First());
@@ -60,12 +60,12 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                 // Updating destination table, and dropping temp table
                 command = "MERGE INTO " + context.GetTableName<T>() + " WITH (HOLDLOCK) AS Target " +
                           "USING " + tmpTableName + " AS Source " +
-                          context.BuildMatchPKs<T>() +
+                          context.PrimaryKeysComparator<T>() +
                           "WHEN MATCHED " +
                           "THEN UPDATE " +
-                          context.BuildUpdateSet<T>() +
+                          context.BuildUpdateSet<T>() + "; " +
                           //SqlHelper.GetOutputIdentityCmd(tmpTableName, context.GetTablePKs<T>().First(), ColumnDirection.Input, OperationType.Update) + "; " +
-                          "DROP TABLE " + tmpTableName + ";";
+                          SqlHelper.GetDropTableCommand(tmpTableName);
 
                 affectedRows = database.ExecuteSqlCommand(command);
 

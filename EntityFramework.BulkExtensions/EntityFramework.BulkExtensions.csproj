@@ -53,8 +53,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BulkOperations\BulkInsert.cs" />
     <Compile Include="BulkOperations\BulkUpdate.cs" />
-    <Compile Include="BulkOperations\ITransaction.cs" />
+    <Compile Include="BulkOperations\IBulkOperation.cs" />
     <Compile Include="Extensions\BulkExtensions.cs" />
     <Compile Include="Extensions\ContextExtension.cs" />
     <Compile Include="Helpers\Constants.cs" />

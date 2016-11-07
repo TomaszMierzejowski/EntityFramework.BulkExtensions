@@ -7,7 +7,7 @@ using EntityFramework.BulkExtensions.Helpers;
 // ReSharper disable once CheckNamespace
 namespace SqlBulkTools
 {
-    internal interface ITransaction
+    internal interface IBulkOperation
     {
         int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, ColumnDirection columnDirection) where T : class;
         Task<int> CommitTransactionAsync<T>(DbContext context, IEnumerable<T> collection);
