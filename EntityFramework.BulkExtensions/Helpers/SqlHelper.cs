@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using EntityFramework.BulkExtensions.Extensions;
 using EntityFramework.MappingAPI;
+using EntityFramework.MappingAPI.Extensions;
 
 namespace EntityFramework.BulkExtensions.Helpers
 {
@@ -16,12 +17,13 @@ namespace EntityFramework.BulkExtensions.Helpers
     internal static class SqlHelper
     {
         private const int RandomLength = 6;
-        internal static string RandomTableName()
+        internal static string RandomTableName<T>(this DbContext context)
         {
-            return $"#tmp{Guid.NewGuid().ToString().Substring(0, RandomLength)}";
+            var schema = context.Db<T>().Schema;
+            return $"[{schema}].[_tmp{Guid.NewGuid().ToString().Substring(0, RandomLength)}]";
         }
 
-        internal static string BuildCreateTempTable<T>(this DbContext context, string tableName, ColumnDirection outputIdentity) where T : class
+        internal static string BuildCreateTempTable<T>(this DbContext context, string tableName, Identity outputIdentity) where T : class
         {
             var columns = context.GetTableColumns<T>();
             var command = new StringBuilder();
@@ -35,11 +37,6 @@ namespace EntityFramework.BulkExtensions.Helpers
             var paramListConcatenated = string.Join(", ", paramList);
 
             command.Append(paramListConcatenated);
-
-            if (outputIdentity == ColumnDirection.InputOutput)
-            {
-                command.Append($", [{Constants.InternalId}] int");
-            }
             command.Append(");");
 
             return command.ToString();
@@ -120,7 +117,7 @@ namespace EntityFramework.BulkExtensions.Helpers
 
         internal static string GetDropTableCommand(string tableName)
         {
-            return "DROP TABLE " + tableName + ";";
+            return $"DROP TABLE {tableName};";
         }
 
         /// <summary>
@@ -132,8 +129,8 @@ namespace EntityFramework.BulkExtensions.Helpers
         internal static string BuildUpdateSet<T>(this DbContext context) where T : class
         {
             var command = new StringBuilder();
-            var paramsSeparated = new List<string>();
-            var tableColumns = context.GetTableColumns<T>(true);
+            var parameters = new List<string>();
+            var tableColumns = context.GetTableColumns<T>();
 
             command.Append("SET ");
 
@@ -141,11 +138,10 @@ namespace EntityFramework.BulkExtensions.Helpers
             {
                 if (column.IsPk) continue;
 
-                paramsSeparated.Add("[" + Constants.TargetAlias + "]" + "." + "[" + column.ColumnName + "]" + " = " + "[" + Constants.SourceAlias + "]" + "."
-                                    + "[" + column.ColumnName + "]");
+                parameters.Add($"[{Constants.Target}].[{column.ColumnName}] = [{Constants.Source}].[{column.ColumnName}]");
             }
 
-            command.Append(string.Join(", ", paramsSeparated) + " ");
+            command.Append(string.Join(", ", parameters) + " ");
 
             return command.ToString();
         }
@@ -155,57 +151,46 @@ namespace EntityFramework.BulkExtensions.Helpers
             var updateOn = context.GetTablePKs<T>().ToList();
             var command = new StringBuilder();
 
-            command.Append("ON " + "[" + Constants.TargetAlias + "]" + "." + "[" + updateOn.First() + "]" + " = " + "[" + Constants.SourceAlias + "]" + "."
-                + "[" + updateOn.First() + "]" + " ");
+            command.Append($"ON [{Constants.Target}].[{updateOn.First()}] = [{Constants.Source}].[{updateOn.First()}] ");
 
             if (updateOn.Count > 1)
             {
-                // Start from index 1 to just append "AND" conditions
                 foreach (var key in updateOn.Skip(1))
                 {
-                    command.Append("AND " + "[" + Constants.TargetAlias + "]" + "." + "[" + key + "]" + " = " + "[" +
-                        Constants.SourceAlias + "]" + "." + "[" + key + "]" + " ");
+                    command.Append($"AND [{Constants.Target}].[{key}] = [{Constants.Source}].[{key}] ");
                 }
             }
 
             return command.ToString();
         }
 
-        internal static string GetInsertIntoStagingTableCmd<T>(this DbContext context, string tmpOutputTableName, string tmpTableName, string identityColumn, ColumnDirection outputIdentity) where T : class
+        internal static string GetInsertIntoStagingTableCmd<T>(this DbContext context, string tmpOutputTableName, string tmpTableName, string identityColumn) where T : class
         {
             var fullTableName = context.GetTableName<T>();
             var columns = context.GetTableColumns<T>().Select(map => map.ColumnName).ToList();
 
-            var comm = GetOutputCreateTableCmd(outputIdentity, tmpOutputTableName,
-            OperationType.Insert, identityColumn) +
+            var comm = GetOutputCreateTableCmd(tmpOutputTableName, identityColumn) +
             BuildInsertIntoSet(columns, identityColumn, fullTableName)
             + "OUTPUT INSERTED.[" + identityColumn + "] INTO "
             + tmpOutputTableName + "([" + identityColumn + "]) "
-            + BuildSelectSet(columns, Constants.SourceAlias, identityColumn)
+            + BuildSelectSet(columns, identityColumn)
             + " FROM " + tmpTableName + " AS Source; " +
-            "DROP TABLE " + tmpTableName + ";";
+            GetDropTableCommand(tmpTableName);
 
             return comm;
         }
 
-        private static string BuildSelectSet(IEnumerable<string> columns, string sourceAlias, string identityColumn)
+        private static string BuildSelectSet(IEnumerable<string> columns, string identityColumn)
         {
             var command = new StringBuilder();
             var selectColumns = new List<string>();
-            var values = new List<string>();
 
             command.Append("SELECT ");
 
             foreach (var column in columns.ToList())
             {
-                if (identityColumn != null && column != identityColumn || identityColumn == null)
-                {
-                    if (column != Constants.InternalId)
-                    {
-                        selectColumns.Add("[" + sourceAlias + "].[" + column + "]");
-                        values.Add("[" + column + "]");
-                    }
-                }
+                if ((identityColumn == null || column == identityColumn) && identityColumn != null) continue;
+                selectColumns.Add($"[{Constants.Source}].[{column}]");
             }
 
             command.Append(string.Join(", ", selectColumns));
@@ -224,8 +209,8 @@ namespace EntityFramework.BulkExtensions.Helpers
 
             foreach (var column in columns)
             {
-                if (column != Constants.InternalId && column != identityColumn)
-                    insertColumns.Add("[" + column + "]");
+                if (column != identityColumn)
+                    insertColumns.Add($"[{column }]");
             }
 
             command.Append(string.Join(", ", insertColumns));
@@ -234,96 +219,55 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
-        internal static string GetOutputIdentityCmd(string tableName, string identityColumn, ColumnDirection outputIdentity, OperationType operation)
-        {
-            var sb = new StringBuilder();
-            if (outputIdentity != ColumnDirection.InputOutput)
-            {
-                return null;
-            }
-            if (operation == OperationType.Insert)
-                sb.Append("OUTPUT INSERTED." + identityColumn + " INTO " + tableName + "(" + identityColumn + "); ");
-
-            else if (operation == OperationType.InsertOrUpdate || operation == OperationType.Update)
-                sb.Append("OUTPUT Source." + Constants.InternalId + ", INSERTED." + identityColumn + " INTO " + tableName
-                    + "(" + Constants.InternalId + ", " + identityColumn + "); ");
-
-            else if (operation == OperationType.Delete)
-                sb.Append("OUTPUT Source." + Constants.InternalId + ", DELETED." + identityColumn + " INTO " + tableName
-                    + "(" + Constants.InternalId + ", " + identityColumn + "); ");
-
-            return sb.ToString();
-        }
-
-        internal static string GetOutputCreateTableCmd(ColumnDirection outputIdentity, string tmpTablename, OperationType operation, string identityColumn)
-        {
-
-            if (operation == OperationType.Insert)
-                return (outputIdentity == ColumnDirection.InputOutput ? "CREATE TABLE " + tmpTablename + "(" + "[" + identityColumn + "] int); " : "");
-
-            else if (operation == OperationType.InsertOrUpdate || operation == OperationType.Update || operation == OperationType.Delete)
-                return (outputIdentity == ColumnDirection.InputOutput ? "CREATE TABLE " + tmpTablename + "("
-                    + "[" + Constants.InternalId + "]" + " int, [" + identityColumn + "] int); " : "");
-
-            return string.Empty;
-        }
-
-        internal static void LoadFromTmpOutputTable<T>(this Database context, string tmpOutputTableName, string tmpTableName, string identityColumn, Dictionary<int, T> outputIdentityDic,
-            OperationType operationType, IEnumerable<T> list)
-        {
-            if (operationType == OperationType.InsertOrUpdate
-                || operationType == OperationType.Update
-                || operationType == OperationType.Delete)
-            {
-                //var command = "SELECT " + Constants.InternalId + ", " + identityColumn + " FROM "
-                //    + Constants.TempOutputTableName + ";";
-                //var identities = context.SqlQuery<int>(command);
-
-                //foreach (var result in identities)
-                //{
-                //    T item;
-
-                //    if (outputIdentityDic.TryGetValue((int)reader[0], out item))
-                //    {
-                //        PropertyInfo p = item.GetType().GetProperty(identityColumn);
-
-                //        if (p.CanWrite)
-                //            p.SetValue(item, reader[1], null);
-
-                //        else
-                //            throw new Exception();
-                //    }
-
-                //}
-
-                ////command = GetDropTmpTableCmd();
-                //context.ExecuteSqlCommand(command);
-            }
-
-            if (operationType == OperationType.Insert)
-            {
-                var command = "SELECT " + identityColumn + " FROM " + tmpOutputTableName + ";";
-                var identities = context.SqlQuery<int>(command);
-
-                var items = list.ToList();
-                var counter = 0;
-
-                foreach (var result in identities)
+        /*
+                internal static string GetOutputIdentityCmd(string tableName, string identityColumn, ColumnDirection outputIdentity, OperationType operation)
                 {
-                    var p = items[counter].GetType().GetProperty(identityColumn);
+                    var sb = new StringBuilder();
+                    if (outputIdentity != ColumnDirection.InputOutput)
+                    {
+                        return null;
+                    }
+                    if (operation == OperationType.Insert)
+                        sb.Append("OUTPUT INSERTED." + identityColumn + " INTO " + tableName + "(" + identityColumn + "); ");
 
-                    if (p.CanWrite)
-                        p.SetValue(items[counter], result, null);
+                    else if (operation == OperationType.InsertOrUpdate || operation == OperationType.Update)
+                        sb.Append("OUTPUT Source." + Constants.InternalId + ", INSERTED." + identityColumn + " INTO " + tableName
+                            + "(" + Constants.InternalId + ", " + identityColumn + "); ");
 
-                    else
-                        throw new Exception();
+                    else if (operation == OperationType.Delete)
+                        sb.Append("OUTPUT Source." + Constants.InternalId + ", DELETED." + identityColumn + " INTO " + tableName
+                            + "(" + Constants.InternalId + ", " + identityColumn + "); ");
 
-                    counter++;
+                    return sb.ToString();
                 }
+        */
 
-                command = GetDropTableCommand(tmpOutputTableName);
-                context.ExecuteSqlCommand(command);
+        private static string GetOutputCreateTableCmd(string tmpTablename, string identityColumn)
+        {
+            return $"CREATE TABLE {tmpTablename}([{identityColumn}] int); ";
+        }
+
+        internal static void LoadFromTmpOutputTable<T>(this Database context, string tmpOutputTableName, string identityColumn, IList<T> items)
+        {
+            var command = $"SELECT {identityColumn} FROM {tmpOutputTableName} ORDER BY {identityColumn};";
+            var identities = context.SqlQuery<int>(command);
+            var counter = 0;
+
+            foreach (var result in identities)
+            {
+                var property = items[counter].GetType().GetProperty(identityColumn);
+
+                if (property.CanWrite)
+                    property.SetValue(items[counter], result, null);
+
+                else
+                    throw new Exception();
+
+                counter++;
             }
+
+            command = GetDropTableCommand(tmpOutputTableName);
+            context.ExecuteSqlCommand(command);
         }
     }
 }

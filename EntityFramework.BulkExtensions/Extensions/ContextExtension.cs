@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Metadata.Edm;
@@ -23,7 +24,7 @@ namespace EntityFramework.BulkExtensions.Extensions
         internal static string GetTableName<T>(this DbContext context) where T : class
         {
             var entityMap = context.Db<T>();
-            return entityMap.TableName;
+            return $"[{entityMap.Schema}].[{entityMap.TableName}]";
         }
 
         /// <summary>
@@ -42,15 +43,13 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <param name="excludePKs"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        internal static IEnumerable<IPropertyMap> GetTableColumns<T>(this DbContext context, bool excludePKs = false) where T : class
+        internal static IEnumerable<IPropertyMap> GetTableColumns<T>(this DbContext context) where T : class
         {
             var entityMap = context.Db<T>();
             return entityMap.Properties
                 .Where(map => !map.IsNavigationProperty)
-                .Where(map => !excludePKs || !map.IsPk)
                 .ToList();
         }
 
@@ -78,7 +77,17 @@ namespace EntityFramework.BulkExtensions.Extensions
         {
             var table = new DataTable();
             foreach (var prop in context.GetTableColumns<T>())
-                table.Columns.Add(prop.ColumnName, prop.Type);
+            {
+                if (Nullable.GetUnderlyingType(prop.Type) != null)
+                {
+                    table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type));
+                }
+                else
+                {
+                    table.Columns.Add(prop.ColumnName, prop.Type);
+                }
+            }
+
             table.TableName = tableName;
             return table;
         }

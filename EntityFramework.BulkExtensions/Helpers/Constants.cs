@@ -2,24 +2,12 @@
 {
     internal static class Constants
     {
-        internal const string InternalId = "BulkExtensions_InternalId";
-        internal const string TempOutputTableName = "#TmpOutput";
-        internal const string SourceAlias = "Source";
-        internal const string TargetAlias = "Target";
-        internal const string UniqueParamIdentifier = "Condition";
-
+        internal const string Source = "Source";
+        internal const string Target = "Target";
     }
 
-#pragma warning disable 1591
-    public enum ColumnDirection
-    {        
-        Input, InputOutput       
-    }
-    
-
-    internal enum OperationType
+    public enum Identity
     {
-        Insert, InsertOrUpdate, Update, Delete
+        InputOnly, InputOutput
     }
-#pragma warning restore 1591
 }

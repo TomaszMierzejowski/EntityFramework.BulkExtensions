@@ -20,13 +20,13 @@ namespace EntityFramework.BulkExtensions.BulkOperations
         /// </summary>
         /// <param name="context"></param>
         /// <param name="collection"></param>
-        /// <param name="columnDirection"></param>
+        /// <param name="identity"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, ColumnDirection columnDirection = ColumnDirection.Input) where T : class
+        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity = Identity.InputOnly) where T : class
         {
-            var tmpTableName = SqlHelper.RandomTableName();
+            var tmpTableName = context.RandomTableName<T>();
             var entityList = collection.ToList();
             var database = context.Database;
             var affectedRows = 0;
@@ -43,7 +43,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
             {
                 var dataTable = context.ToDataTable(entityList);
                 //Creating temp table on database
-                var command = context.BuildCreateTempTable<T>(tmpTableName, columnDirection);
+                var command = context.BuildCreateTempTable<T>(tmpTableName, identity);
                 database.ExecuteSqlCommand(command);
 
                 //Bulk insert into temp table

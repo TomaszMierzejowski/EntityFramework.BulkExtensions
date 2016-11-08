@@ -12,9 +12,9 @@ namespace EntityFramework.BulkExtensions.BulkOperations
 {
     public class BulkInsert : IBulkOperation
     {
-        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, ColumnDirection columnDirection) where T : class
+        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity) where T : class
         {
-            var tmpTableName = SqlHelper.RandomTableName();
+            var tmpTableName = context.RandomTableName<T>();
             var entityList = collection.ToList();
             var database = context.Database;
             var affectedRows = 0;
@@ -32,18 +32,18 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                 var dataTable = context.ToDataTable(entityList);
                 //Creating temp table on database
 
-                if (columnDirection == ColumnDirection.InputOutput)
+                if (identity == Identity.InputOutput)
                 {
-                    var command = context.BuildCreateTempTable<T>(tmpTableName, columnDirection);
+                    var command = context.BuildCreateTempTable<T>(tmpTableName, identity);
                     database.ExecuteSqlCommand(command);
 
                     database.BulkInsertToTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
 
-                    var tmpOutputTableName = SqlHelper.RandomTableName();
-                    var commandText = context.GetInsertIntoStagingTableCmd<T>(tmpOutputTableName, tmpTableName, context.GetTablePKs<T>().First(), columnDirection);
+                    var tmpOutputTableName = context.RandomTableName<T>();
+                    var commandText = context.GetInsertIntoStagingTableCmd<T>(tmpOutputTableName, tmpTableName, context.GetTablePKs<T>().First());
                     database.ExecuteSqlCommand(commandText);
 
-                    database.LoadFromTmpOutputTable(tmpOutputTableName, tmpTableName, context.GetTablePKs<T>().First(), null, OperationType.Insert, collection);
+                    database.LoadFromTmpOutputTable(tmpOutputTableName, context.GetTablePKs<T>().First(), entityList);
                 }
                 else
                 {

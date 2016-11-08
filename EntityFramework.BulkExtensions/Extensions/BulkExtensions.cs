@@ -16,12 +16,12 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// </summary>
         /// <param name="context"></param>
         /// <param name="entities"></param>
-        /// <param name="columnDirection"></param>
+        /// <param name="identity"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities, ColumnDirection columnDirection = ColumnDirection.Input) where T : class
+        public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities, Identity identity = Identity.InputOnly) where T : class
         {
-            return new BulkInsert().CommitTransaction(context, entities, columnDirection);
+            return new BulkInsert().CommitTransaction(context, entities, identity);
         }
 
         /// <summary>
