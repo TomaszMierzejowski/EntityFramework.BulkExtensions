@@ -56,6 +56,9 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                 }
 
                 affectedRows = dataTable.Rows.Count;
+                
+                //Commit if internal transaction exists.
+                transaction?.Commit();
                 return affectedRows;
             }
             catch (Exception)
