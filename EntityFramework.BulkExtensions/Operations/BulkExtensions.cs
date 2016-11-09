@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using EntityFramework.BulkExtensions.BulkOperations;
-using EntityFramework.BulkExtensions.Helpers;
 
-namespace EntityFramework.BulkExtensions.Extensions
+namespace EntityFramework.BulkExtensions.Operations
 {
     /// <summary>
     /// 
@@ -48,5 +47,10 @@ namespace EntityFramework.BulkExtensions.Extensions
         {
             throw new NotImplementedException();
         }
+    }
+
+    public enum Identity
+    {
+        InputOnly, InputOutput
     }
 }

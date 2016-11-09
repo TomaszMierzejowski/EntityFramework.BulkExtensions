@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using EntityFramework.BulkExtensions.Extensions;
+using EntityFramework.BulkExtensions.Operations;
 using EntityFramework.MappingAPI;
 using EntityFramework.MappingAPI.Extensions;
 

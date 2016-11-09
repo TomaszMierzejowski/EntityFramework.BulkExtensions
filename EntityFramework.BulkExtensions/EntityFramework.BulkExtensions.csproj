@@ -56,16 +56,19 @@
     <Compile Include="BulkOperations\BulkInsert.cs" />
     <Compile Include="BulkOperations\BulkUpdate.cs" />
     <Compile Include="BulkOperations\IBulkOperation.cs" />
-    <Compile Include="Extensions\BulkExtensions.cs" />
+    <Compile Include="Operations\BulkExtensions.cs" />
     <Compile Include="Extensions\ContextExtension.cs" />
     <Compile Include="Helpers\Constants.cs" />
     <Compile Include="Helpers\SqlHelper.cs" />
+    <Compile Include="Metadata\ContextMetadataExtension.cs" />
+    <Compile Include="Metadata\EntityMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

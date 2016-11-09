@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Data.Entity;
-using System.Data.SqlClient;
 using System.Threading.Tasks;
-using EntityFramework.BulkExtensions.Helpers;
+using EntityFramework.BulkExtensions.Operations;
 
 // ReSharper disable once CheckNamespace
+
 namespace SqlBulkTools
 {
     internal interface IBulkOperation

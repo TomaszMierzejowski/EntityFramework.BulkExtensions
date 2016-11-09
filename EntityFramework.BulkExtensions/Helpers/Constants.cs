@@ -4,10 +4,5 @@
     {
         internal const string Source = "Source";
         internal const string Target = "Target";
-    }
-
-    public enum Identity
-    {
-        InputOnly, InputOutput
-    }
+    }   
 }
