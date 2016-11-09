@@ -13,7 +13,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
 {
     public class BulkInsert : IBulkOperation
     {
-        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity) where T : class
+        int IBulkOperation.CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity)
         {
             var tmpTableName = context.RandomTableName<T>();
             var entityList = collection.ToList();
@@ -23,46 +23,46 @@ namespace EntityFramework.BulkExtensions.BulkOperations
             {
                 return affectedRows;
             }
-            DbContextTransaction transaction = null;
-            if (database.CurrentTransaction == null)
-            {
-                transaction = database.BeginTransaction();
-            }
+
+            //Creates inner transaction if the context doens't have one.
+            var transaction = context.InternalTransaction();
             try
             {
+                //Cconvert entity collection into a DataTable
                 var dataTable = context.ToDataTable(entityList);
-                //Creating temp table on database
 
+                //Return generated IDs for bulk inserted elements.
                 if (identity == Identity.InputOutput)
                 {
-                    var command = context.BuildCreateTempTable<T>(tmpTableName, identity);
+                    //Create temporary table.
+                    var command = context.BuildCreateTempTable<T>(tmpTableName);
                     database.ExecuteSqlCommand(command);
 
+                    //Bulk inset data to temporary temporary table.
                     database.BulkInsertToTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
 
                     var tmpOutputTableName = context.RandomTableName<T>();
+                    //Copy data from temporary table to destination table with ID output to another temporary table.
                     var commandText = context.GetInsertIntoStagingTableCmd<T>(tmpOutputTableName, tmpTableName, context.GetTablePKs<T>().First());
                     database.ExecuteSqlCommand(commandText);
 
+                    //Load generated IDs from temporary output table into the entities.
                     database.LoadFromTmpOutputTable(tmpOutputTableName, context.GetTablePKs<T>().First(), entityList);
                 }
                 else
                 {
+                    //Bulk inset data to temporary destination table.
                     database.BulkInsertToTable(dataTable, context.GetTableName<T>(), SqlBulkCopyOptions.Default);
                 }
 
                 affectedRows = dataTable.Rows.Count;
                 return affectedRows;
             }
-
             catch (Exception)
             {
+                //Rollback if internal transaction exists.
                 transaction?.Rollback();
                 throw;
-            }
-            finally
-            {
-                transaction?.Commit();
             }
         }
 

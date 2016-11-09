@@ -25,7 +25,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity = Identity.InputOnly) where T : class
+        int IBulkOperation.CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity)
         {
             var tmpTableName = context.RandomTableName<T>();
             var entityList = collection.ToList();
@@ -35,58 +35,37 @@ namespace EntityFramework.BulkExtensions.BulkOperations
             {
                 return affectedRows;
             }
-            DbContextTransaction transaction = null;
-            if (database.CurrentTransaction == null)
-            {
-                transaction = database.BeginTransaction();
-            }
+
+            //Creates inner transaction if the context doens't have one.
+            var transaction = context.InternalTransaction();
             try
             {
+                //Cconvert entity collection into a DataTable
                 var dataTable = context.ToDataTable(entityList);
-                //Creating temp table on database
-                var command = context.BuildCreateTempTable<T>(tmpTableName, identity);
+                //Create temporary table.
+                var command = context.BuildCreateTempTable<T>(tmpTableName);
                 database.ExecuteSqlCommand(command);
 
-                //Bulk insert into temp table
+                //Bulk inset data to temporary temporary table.
                 database.BulkInsertToTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
 
-                //command = SqlHelper.GetOutputCreateTableCmd(columnDirection, Constants.TempOutputTableName,
-                //OperationType.InsertOrUpdate, context.GetTablePKs<T>().First());
-
-                //if (!string.IsNullOrWhiteSpace(command))
-                //{
-                //    database.ExecuteSqlCommand(command);
-                //}
-
-                // Updating destination table, and dropping temp table
-                command = "MERGE INTO " + context.GetTableName<T>() + " WITH (HOLDLOCK) AS Target " +
-                          "USING " + tmpTableName + " AS Source " +
-                          context.PrimaryKeysComparator<T>() +
-                          "WHEN MATCHED " +
-                          "THEN UPDATE " +
-                          context.BuildUpdateSet<T>() + "; " +
-                          //SqlHelper.GetOutputIdentityCmd(tmpTableName, context.GetTablePKs<T>().First(), ColumnDirection.Input, OperationType.Update) + "; " +
+                //Copy data from temporary table to destination table.
+                command = $"MERGE INTO {context.GetTableName<T>()} WITH (HOLDLOCK) AS Target USING {tmpTableName} AS Source " +
+                          $"{context.PrimaryKeysComparator<T>()} WHEN MATCHED THEN UPDATE {context.BuildUpdateSet<T>()}; " +
                           SqlHelper.GetDropTableCommand(tmpTableName);
+
 
                 affectedRows = database.ExecuteSqlCommand(command);
 
-                //if (columnDirection == ColumnDirection.InputOutput)
-                //{
-                //    database.LoadFromTmpOutputTable(context.GetTablePKs<T>().First(), columnDirection,
-                //        OperationType.Update, entityList);
-                //}
-
+                //Commit if internal transaction exists.
+                transaction?.Commit();
                 return affectedRows;
             }
-
             catch (Exception)
             {
+                //Rollback if internal transaction exists.
                 transaction?.Rollback();
                 throw;
-            }
-            finally
-            {
-                transaction?.Commit();
             }
         }
 

@@ -20,7 +20,7 @@ namespace EntityFramework.BulkExtensions.Operations
         /// <returns></returns>
         public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities, Identity identity = Identity.InputOnly) where T : class
         {
-            return new BulkInsert().CommitTransaction(context, entities, identity);
+            return OperationFactory.BulkInsert.CommitTransaction(context, entities, identity);
         }
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace EntityFramework.BulkExtensions.Operations
         /// <returns></returns>
         public static int BulkUpdate<T>(this DbContext context, IEnumerable<T> entities) where T : class
         {
-            return new BulkUpdate().CommitTransaction(context, entities);
+            return OperationFactory.BulkUpdate.CommitTransaction(context, entities);
         }
 
         /// <summary>
