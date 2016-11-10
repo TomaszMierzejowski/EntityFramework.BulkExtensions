@@ -1,6 +1,4 @@
-﻿using SqlBulkTools;
-
-namespace EntityFramework.BulkExtensions.BulkOperations
+﻿namespace EntityFramework.BulkExtensions.BulkOperations
 {
     internal static class OperationFactory
     {

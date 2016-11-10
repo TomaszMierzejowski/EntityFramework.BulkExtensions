@@ -5,7 +5,7 @@ using EntityFramework.BulkExtensions.Operations;
 
 // ReSharper disable once CheckNamespace
 
-namespace SqlBulkTools
+namespace EntityFramework.BulkExtensions.BulkOperations
 {
     internal interface IBulkOperation
     {

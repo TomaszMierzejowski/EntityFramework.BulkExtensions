@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using EntityFramework.BulkExtensions.Extensions;
 using EntityFramework.BulkExtensions.Helpers;
 using EntityFramework.BulkExtensions.Operations;
-using SqlBulkTools;
 
 namespace EntityFramework.BulkExtensions.BulkOperations
 {
