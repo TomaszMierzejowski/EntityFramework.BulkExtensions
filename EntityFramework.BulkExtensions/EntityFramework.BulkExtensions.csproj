@@ -62,8 +62,6 @@
     <Compile Include="Extensions\ContextExtension.cs" />
     <Compile Include="Helpers\Constants.cs" />
     <Compile Include="Helpers\SqlHelper.cs" />
-    <Compile Include="Metadata\ContextMetadataExtension.cs" />
-    <Compile Include="Metadata\EntityMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -54,7 +54,6 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                           $"{context.PrimaryKeysComparator<T>()} WHEN MATCHED THEN UPDATE {context.BuildUpdateSet<T>()}; " +
                           SqlHelper.GetDropTableCommand(tmpTableName);
 
-
                 affectedRows = database.ExecuteSqlCommand(command);
 
                 //Commit if internal transaction exists.
