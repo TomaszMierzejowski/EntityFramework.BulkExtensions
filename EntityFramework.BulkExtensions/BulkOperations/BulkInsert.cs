@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Threading.Tasks;
 using EntityFramework.BulkExtensions.Extensions;
 using EntityFramework.BulkExtensions.Helpers;
 using EntityFramework.BulkExtensions.Operations;
@@ -66,11 +65,6 @@ namespace EntityFramework.BulkExtensions.BulkOperations
                 transaction?.Rollback();
                 throw;
             }
-        }
-
-        public Task<int> CommitTransactionAsync<T>(DbContext context, IEnumerable<T> collection)
-        {
-            throw new NotImplementedException();
         }
     }
 }
