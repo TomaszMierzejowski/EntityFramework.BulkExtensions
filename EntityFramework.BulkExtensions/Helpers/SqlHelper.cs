@@ -112,13 +112,13 @@ namespace EntityFramework.BulkExtensions.Helpers
             var fullTableName = context.GetTableName<TEntity>();
             var columns = context.GetTableColumns<TEntity>().Select(map => map.ColumnName).ToList();
 
-            var comm = GetOutputCreateTableCmd(tmpOutputTableName, identityColumn) +
-                       BuildInsertIntoSet(columns, identityColumn, fullTableName)
-                       + "OUTPUT INSERTED.[" + identityColumn + "] INTO "
-                       + tmpOutputTableName + "([" + identityColumn + "]) "
+            var comm = GetOutputCreateTableCmd(tmpOutputTableName, identityColumn)
+                       + BuildInsertIntoSet(columns, identityColumn, fullTableName)
+                       + $"OUTPUT INSERTED.{identityColumn} INTO "
+                       + tmpOutputTableName + $"([{identityColumn}]) "
                        + BuildSelectSet(columns, identityColumn)
-                       + " FROM " + tmpTableName + " AS Source; " +
-                       GetDropTableCommand(tmpTableName);
+                       + $" FROM {tmpTableName} AS Source; "
+                       + GetDropTableCommand(tmpTableName);
 
             return comm;
         }
