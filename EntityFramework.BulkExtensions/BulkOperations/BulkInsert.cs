@@ -10,13 +10,21 @@ using EntityFramework.BulkExtensions.Operations;
 
 namespace EntityFramework.BulkExtensions.BulkOperations
 {
-    public class BulkInsert : IBulkOperation
+    internal class BulkInsert : IBulkOperation
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="collection"></param>
+        /// <param name="identity"></param>
+        /// <returns></returns>
         int IBulkOperation.CommitTransaction<TEntity>(DbContext context, IEnumerable<TEntity> collection, Identity identity)
         {
             if (!context.Exists<TEntity>())
             {
-                throw new EntityException(@"Entity is not being mapped by Entity Framework.Check your model.");
+                throw new EntityException(@"Entity is not being mapped by Entity Framework. Check your model.");
             }
             var tmpTableName = context.RandomTableName<TEntity>();
             var entityList = collection.ToList();

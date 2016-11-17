@@ -17,5 +17,13 @@
                 return new BulkUpdate();
             }
         }
+
+        internal static IBulkOperation BulkDelete
+        {
+            get
+            {
+                return new BulkDelete();
+            }
+        }
     }
 }

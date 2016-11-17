@@ -15,30 +15,13 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="TEntity"></typeparam>
-        /// <returns></returns>
-        private static DataTable CreateDataTable<TEntity>(this DbContext context) where TEntity : class
-        {
-            var table = new DataTable();
-            foreach (var prop in context.GetTableColumns<TEntity>())
-            {
-                table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type) ?? prop.Type);
-            }
-
-            table.TableName = nameof(TEntity);
-            return table;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="context"></param>
         /// <param name="entities"></param>
+        /// <param name="primaryKeysOnly"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static DataTable ToDataTable<TEntity>(this DbContext context, IEnumerable<TEntity> entities) where TEntity : class
+        internal static DataTable ToDataTable<TEntity>(this DbContext context, IEnumerable<TEntity> entities, bool primaryKeysOnly = false) where TEntity : class
         {
-            var tb = context.CreateDataTable<TEntity>();
+            var tb = context.CreateDataTable<TEntity>(primaryKeysOnly);
             var tableColumns = context.GetTableColumns<TEntity>().ToList();
             var props = typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
@@ -58,6 +41,11 @@ namespace EntityFramework.BulkExtensions.Extensions
             return tb;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         internal static DbContextTransaction InternalTransaction(this DbContext context)
         {
             DbContextTransaction transaction = null;
@@ -66,6 +54,20 @@ namespace EntityFramework.BulkExtensions.Extensions
                 transaction = context.Database.BeginTransaction();
             }
             return transaction;
+        }
+
+        private static DataTable CreateDataTable<TEntity>(this DbContext context, bool primaryKeysOnly = false) where TEntity : class
+        {
+            var table = new DataTable();
+            var columns = context.GetTableColumns<TEntity>();
+            columns = primaryKeysOnly ? columns.Where(map => map.IsPk) : columns;
+            foreach (var prop in columns)
+            {
+                table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type) ?? prop.Type);
+            }
+
+            table.TableName = nameof(TEntity);
+            return table;
         }
     }
 }

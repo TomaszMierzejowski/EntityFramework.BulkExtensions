@@ -53,6 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BulkOperations\BulkDelete.cs" />
     <Compile Include="BulkOperations\BulkInsert.cs" />
     <Compile Include="BulkOperations\BulkUpdate.cs" />
     <Compile Include="BulkOperations\IBulkOperation.cs" />

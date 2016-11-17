@@ -13,7 +13,7 @@ namespace EntityFramework.BulkExtensions.BulkOperations
     /// <summary>
     /// 
     /// </summary>
-    internal class BulkUpdate : IBulkOperation
+    internal class BulkDelete : IBulkOperation
     {
         /// <summary>
         /// 
@@ -42,18 +42,18 @@ namespace EntityFramework.BulkExtensions.BulkOperations
             var transaction = context.InternalTransaction();
             try
             {
-                //Cconvert entity collection into a DataTable
-                var dataTable = context.ToDataTable(entityList);
-                //Create temporary table.
-                var command = context.BuildCreateTempTable<TEntity>(tmpTableName);
+                //Cconvert entity collection into a DataTable with only the primary keys.
+                var dataTable = context.ToDataTable(entityList, true);
+                //Create temporary table with only the primary keys.
+                var command = context.BuildCreateTempTable<TEntity>(tmpTableName, true);
                 database.ExecuteSqlCommand(command);
 
                 //Bulk inset data to temporary temporary table.
                 database.BulkInsertToTable(dataTable, tmpTableName, SqlBulkCopyOptions.Default);
 
-                //Copy data from temporary table to destination table.
+                //Merge delete items from the target table that matches ids from the temporary table.
                 command = $"MERGE INTO {context.GetTableName<TEntity>()} WITH (HOLDLOCK) AS Target USING {tmpTableName} AS Source " +
-                          $"{context.PrimaryKeysComparator<TEntity>()} WHEN MATCHED THEN UPDATE {context.BuildUpdateSet<TEntity>()}; " +
+                          $"{context.PrimaryKeysComparator<TEntity>()} WHEN MATCHED THEN DELETE;" +
                           SqlHelper.GetDropTableCommand(tmpTableName);
 
                 affectedRows = database.ExecuteSqlCommand(command);

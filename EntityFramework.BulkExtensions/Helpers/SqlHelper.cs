@@ -17,15 +17,30 @@ namespace EntityFramework.BulkExtensions.Helpers
     {
         private const int RandomLength = 6;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <returns></returns>
         internal static string RandomTableName<TEntity>(this DbContext context)
         {
             var schema = context.Db<TEntity>().Schema;
             return $"[{schema}].[_tmp{Guid.NewGuid().ToString().Substring(0, RandomLength)}]";
         }
 
-        internal static string BuildCreateTempTable<TEntity>(this DbContext context, string tableName) where TEntity : class
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="tableName"></param>
+        /// <param name="primaryKeysOnly"></param>
+        /// <returns></returns>
+        internal static string BuildCreateTempTable<TEntity>(this DbContext context, string tableName, bool primaryKeysOnly = false) where TEntity : class
         {
             var columns = context.GetTableColumns<TEntity>();
+            columns = primaryKeysOnly ? columns.Where(map => map.IsPk) : columns;
             var command = new StringBuilder();
 
             command.Append($"CREATE TABLE {tableName}(");
@@ -61,6 +76,11 @@ namespace EntityFramework.BulkExtensions.Helpers
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
         internal static string GetDropTableCommand(string tableName)
         {
             return $"DROP TABLE {tableName};";
@@ -92,6 +112,12 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <returns></returns>
         internal static string PrimaryKeysComparator<TEntity>(this DbContext context) where TEntity : class
         {
             var updateOn = context.GetTablePKs<TEntity>().ToList();
@@ -106,6 +132,15 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="tmpOutputTableName"></param>
+        /// <param name="tmpTableName"></param>
+        /// <param name="identityColumn"></param>
+        /// <returns></returns>
         internal static string GetInsertIntoStagingTableCmd<TEntity>(this DbContext context, string tmpOutputTableName,
             string tmpTableName, string identityColumn) where TEntity : class
         {
@@ -121,6 +156,38 @@ namespace EntityFramework.BulkExtensions.Helpers
                        + GetDropTableCommand(tmpTableName);
 
             return comm;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="tmpOutputTableName"></param>
+        /// <param name="identityColumn"></param>
+        /// <param name="items"></param>
+        internal static void LoadFromTmpOutputTable<TEntity>(this Database context, string tmpOutputTableName,
+            string identityColumn, IList<TEntity> items)
+        {
+            var command = $"SELECT {identityColumn} FROM {tmpOutputTableName} ORDER BY {identityColumn};";
+            var identities = context.SqlQuery<int>(command);
+            var counter = 0;
+
+            foreach (var result in identities)
+            {
+                var property = items[counter].GetType().GetProperty(identityColumn);
+
+                if (property.CanWrite)
+                    property.SetValue(items[counter], result, null);
+
+                else
+                    throw new Exception();
+
+                counter++;
+            }
+
+            command = GetDropTableCommand(tmpOutputTableName);
+            context.ExecuteSqlCommand(command);
         }
 
         private static string BuildSelectSet(IEnumerable<string> columns, string identityColumn)
@@ -163,30 +230,6 @@ namespace EntityFramework.BulkExtensions.Helpers
         private static string GetOutputCreateTableCmd(string tmpTablename, string identityColumn)
         {
             return $"CREATE TABLE {tmpTablename}([{identityColumn}] int); ";
-        }
-
-        internal static void LoadFromTmpOutputTable<TEntity>(this Database context, string tmpOutputTableName,
-            string identityColumn, IList<TEntity> items)
-        {
-            var command = $"SELECT {identityColumn} FROM {tmpOutputTableName} ORDER BY {identityColumn};";
-            var identities = context.SqlQuery<int>(command);
-            var counter = 0;
-
-            foreach (var result in identities)
-            {
-                var property = items[counter].GetType().GetProperty(identityColumn);
-
-                if (property.CanWrite)
-                    property.SetValue(items[counter], result, null);
-
-                else
-                    throw new Exception();
-
-                counter++;
-            }
-
-            command = GetDropTableCommand(tmpOutputTableName);
-            context.ExecuteSqlCommand(command);
         }
 
         private static string GetSchemaType(this IPropertyMap column, string columnType)

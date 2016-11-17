@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.Entity;
 using EntityFramework.BulkExtensions.BulkOperations;
 
@@ -42,10 +41,9 @@ namespace EntityFramework.BulkExtensions.Operations
         /// <param name="entities"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
         public static int BulkDelete<TEntity>(this DbContext context, IEnumerable<TEntity> entities) where TEntity : class
         {
-            throw new NotImplementedException();
+            return OperationFactory.BulkDelete.CommitTransaction(context, entities);
         }
     }
 
