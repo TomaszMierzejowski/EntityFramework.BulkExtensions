@@ -16,9 +16,9 @@ namespace EntityFramework.BulkExtensions.Operations
         /// <param name="context"></param>
         /// <param name="entities"></param>
         /// <param name="identity"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        public static int BulkInsert<T>(this DbContext context, IEnumerable<T> entities, Identity identity = Identity.InputOnly) where T : class
+        public static int BulkInsert<TEntity>(this DbContext context, IEnumerable<TEntity> entities, Identity identity = Identity.InputOnly) where TEntity : class
         {
             return OperationFactory.BulkInsert.CommitTransaction(context, entities, identity);
         }
@@ -28,9 +28,9 @@ namespace EntityFramework.BulkExtensions.Operations
         /// </summary>
         /// <param name="context"></param>
         /// <param name="entities"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        public static int BulkUpdate<T>(this DbContext context, IEnumerable<T> entities) where T : class
+        public static int BulkUpdate<TEntity>(this DbContext context, IEnumerable<TEntity> entities) where TEntity : class
         {
             return OperationFactory.BulkUpdate.CommitTransaction(context, entities);
         }
@@ -40,10 +40,10 @@ namespace EntityFramework.BulkExtensions.Operations
         /// </summary>
         /// <param name="context"></param>
         /// <param name="entities"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public static int BulkDelete<T>(this DbContext context, IEnumerable<T> entities) where T : class
+        public static int BulkDelete<TEntity>(this DbContext context, IEnumerable<TEntity> entities) where TEntity : class
         {
             throw new NotImplementedException();
         }

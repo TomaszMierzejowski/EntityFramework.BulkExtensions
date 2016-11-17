@@ -14,11 +14,11 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static string GetTableName<T>(this DbContext context) where T : class
+        internal static string GetTableName<TEntity>(this DbContext context) where TEntity : class
         {
-            var entityMap = context.Db<T>();
+            var entityMap = context.Db<TEntity>();
             return $"[{entityMap.Schema}].[{entityMap.TableName}]";
         }
 
@@ -26,11 +26,11 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static IEnumerable<string> GetTablePKs<T>(this DbContext context) where T : class
+        internal static IEnumerable<string> GetTablePKs<TEntity>(this DbContext context) where TEntity : class
         {
-            var entityMap = context.Db<T>();
+            var entityMap = context.Db<TEntity>();
             return entityMap.Pks.Select(map => map.ColumnName);
         }
 
@@ -38,20 +38,20 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static IEnumerable<IPropertyMap> GetTableColumns<T>(this DbContext context) where T : class
+        internal static IEnumerable<IPropertyMap> GetTableColumns<TEntity>(this DbContext context) where TEntity : class
         {
-            var entityMap = context.Db<T>();
+            var entityMap = context.Db<TEntity>();
             return entityMap.Properties
                 .Where(map => !map.IsNavigationProperty)
                 .ToList();
         }
 
-        internal static IDictionary<string, string> GetPrimitiveType<T>(this DbContext context) where T : class
+        internal static IDictionary<string, string> GetPrimitiveType<TEntity>(this DbContext context) where TEntity : class
         {
             var map = new Dictionary<string, string>();
-            var entityMap = context.EntitySchema<T>().Members.ToList();
+            var entityMap = context.EntitySchema<TEntity>().Members.ToList();
 
             foreach (var member in entityMap)
             {
@@ -61,13 +61,20 @@ namespace EntityFramework.BulkExtensions.Extensions
             return map;
         }
 
-        private static EntityType EntitySchema<T>(this IObjectContextAdapter context) where T : class
+        private static EntityType EntitySchema<TEntity>(this IObjectContextAdapter context) where TEntity : class
         {
             var items = context.ObjectContext.MetadataWorkspace
                 .GetItems<EntityType>(DataSpace.SSpace);
-            var name = typeof(T).Name;
+            var name = typeof(TEntity).Name;
 
             return items.SingleOrDefault(type => type.Name == name);
+        }
+
+        public static bool Exists<TEntity>(this IObjectContextAdapter context) where TEntity : class
+        {
+            var entityName = typeof(TEntity).Name;
+            var workspace = context.ObjectContext.MetadataWorkspace;
+            return workspace.GetItems<EntityType>(DataSpace.CSpace).Any(e => e.Name == entityName);
         }
     }
 }

@@ -8,6 +8,6 @@ namespace EntityFramework.BulkExtensions.BulkOperations
 {
     internal interface IBulkOperation
     {
-        int CommitTransaction<T>(DbContext context, IEnumerable<T> collection, Identity identity = Identity.InputOnly) where T : class;
+        int CommitTransaction<TEntity>(DbContext context, IEnumerable<TEntity> collection, Identity identity = Identity.InputOnly) where TEntity : class;
     }
 }

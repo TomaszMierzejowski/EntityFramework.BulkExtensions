@@ -17,20 +17,20 @@ namespace EntityFramework.BulkExtensions.Helpers
     {
         private const int RandomLength = 6;
 
-        internal static string RandomTableName<T>(this DbContext context)
+        internal static string RandomTableName<TEntity>(this DbContext context)
         {
-            var schema = context.Db<T>().Schema;
+            var schema = context.Db<TEntity>().Schema;
             return $"[{schema}].[_tmp{Guid.NewGuid().ToString().Substring(0, RandomLength)}]";
         }
 
-        internal static string BuildCreateTempTable<T>(this DbContext context, string tableName) where T : class
+        internal static string BuildCreateTempTable<TEntity>(this DbContext context, string tableName) where TEntity : class
         {
-            var columns = context.GetTableColumns<T>();
+            var columns = context.GetTableColumns<TEntity>();
             var command = new StringBuilder();
 
             command.Append($"CREATE TABLE {tableName}(");
 
-            var primitiveTypes = context.GetPrimitiveType<T>();
+            var primitiveTypes = context.GetPrimitiveType<TEntity>();
             var paramList = columns
                 .Select(column => $"[{column.ColumnName}] {column.GetSchemaType(primitiveTypes[column.ColumnName])}")
                 .ToList();
@@ -69,13 +69,13 @@ namespace EntityFramework.BulkExtensions.Helpers
         /// <summary>
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static string BuildUpdateSet<T>(this DbContext context) where T : class
+        internal static string BuildUpdateSet<TEntity>(this DbContext context) where TEntity : class
         {
             var command = new StringBuilder();
             var parameters = new List<string>();
-            var tableColumns = context.GetTableColumns<T>();
+            var tableColumns = context.GetTableColumns<TEntity>();
 
             command.Append("SET ");
 
@@ -92,9 +92,9 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
-        internal static string PrimaryKeysComparator<T>(this DbContext context) where T : class
+        internal static string PrimaryKeysComparator<TEntity>(this DbContext context) where TEntity : class
         {
-            var updateOn = context.GetTablePKs<T>().ToList();
+            var updateOn = context.GetTablePKs<TEntity>().ToList();
             var command = new StringBuilder();
 
             command.Append($"ON [{Constants.Target}].[{updateOn.First()}] = [{Constants.Source}].[{updateOn.First()}] ");
@@ -106,11 +106,11 @@ namespace EntityFramework.BulkExtensions.Helpers
             return command.ToString();
         }
 
-        internal static string GetInsertIntoStagingTableCmd<T>(this DbContext context, string tmpOutputTableName,
-            string tmpTableName, string identityColumn) where T : class
+        internal static string GetInsertIntoStagingTableCmd<TEntity>(this DbContext context, string tmpOutputTableName,
+            string tmpTableName, string identityColumn) where TEntity : class
         {
-            var fullTableName = context.GetTableName<T>();
-            var columns = context.GetTableColumns<T>().Select(map => map.ColumnName).ToList();
+            var fullTableName = context.GetTableName<TEntity>();
+            var columns = context.GetTableColumns<TEntity>().Select(map => map.ColumnName).ToList();
 
             var comm = GetOutputCreateTableCmd(tmpOutputTableName, identityColumn) +
                        BuildInsertIntoSet(columns, identityColumn, fullTableName)
@@ -165,8 +165,8 @@ namespace EntityFramework.BulkExtensions.Helpers
             return $"CREATE TABLE {tmpTablename}([{identityColumn}] int); ";
         }
 
-        internal static void LoadFromTmpOutputTable<T>(this Database context, string tmpOutputTableName,
-            string identityColumn, IList<T> items)
+        internal static void LoadFromTmpOutputTable<TEntity>(this Database context, string tmpOutputTableName,
+            string identityColumn, IList<TEntity> items)
         {
             var command = $"SELECT {identityColumn} FROM {tmpOutputTableName} ORDER BY {identityColumn};";
             var identities = context.SqlQuery<int>(command);

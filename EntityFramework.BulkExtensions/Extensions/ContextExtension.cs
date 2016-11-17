@@ -15,24 +15,17 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// 
         /// </summary>
         /// <param name="context"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        private static DataTable CreateDataTable<T>(this DbContext context) where T : class
+        private static DataTable CreateDataTable<TEntity>(this DbContext context) where TEntity : class
         {
             var table = new DataTable();
-            foreach (var prop in context.GetTableColumns<T>())
+            foreach (var prop in context.GetTableColumns<TEntity>())
             {
-                if (Nullable.GetUnderlyingType(prop.Type) != null)
-                {
-                    table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type));
-                }
-                else
-                {
-                    table.Columns.Add(prop.ColumnName, prop.Type);
-                }
+                table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type) ?? prop.Type);
             }
 
-            table.TableName = nameof(T);
+            table.TableName = nameof(TEntity);
             return table;
         }
 
@@ -41,13 +34,13 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// </summary>
         /// <param name="context"></param>
         /// <param name="entities"></param>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static DataTable ToDataTable<T>(this DbContext context, IEnumerable<T> entities) where T : class
+        internal static DataTable ToDataTable<TEntity>(this DbContext context, IEnumerable<TEntity> entities) where TEntity : class
         {
-            var tb = context.CreateDataTable<T>();
-            var tableColumns = context.GetTableColumns<T>().ToList();
-            var props = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var tb = context.CreateDataTable<TEntity>();
+            var tableColumns = context.GetTableColumns<TEntity>().ToList();
+            var props = typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             foreach (var item in entities)
             {
