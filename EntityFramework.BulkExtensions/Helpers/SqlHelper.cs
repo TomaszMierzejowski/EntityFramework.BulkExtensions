@@ -52,8 +52,8 @@ namespace EntityFramework.BulkExtensions.Helpers
             SqlBulkCopyOptions sqlBulkCopyOptions)
         {
             using (
-                var bulkcopy = new SqlBulkCopy((SqlConnection) context.Connection, sqlBulkCopyOptions,
-                    (SqlTransaction) context.CurrentTransaction.UnderlyingTransaction))
+                var bulkcopy = new SqlBulkCopy((SqlConnection)context.Connection, sqlBulkCopyOptions,
+                    (SqlTransaction)context.CurrentTransaction.UnderlyingTransaction))
             {
                 bulkcopy.DestinationTableName = tableName;
                 bulkcopy.BulkCopyTimeout = context.Connection.ConnectionTimeout;
@@ -200,11 +200,11 @@ namespace EntityFramework.BulkExtensions.Helpers
                 case "varbinary":
                 case "nchar":
                     if (column.MaxLength != 0)
-                        columnType = columnType + "(" + column.MaxLength + ")";
+                        columnType = columnType + $"({column.MaxLength})";
                     break;
                 case "decimal":
                 case "numeric":
-                    columnType = columnType + "(" + column.Precision + ", " + column.Scale + ")";
+                    columnType = columnType + $"({column.Precision}, {column.Scale})";
                     break;
                 case "datetime2":
                 case "time":
