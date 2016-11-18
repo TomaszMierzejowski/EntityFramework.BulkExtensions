@@ -22,7 +22,9 @@ namespace EntityFramework.BulkExtensions.Extensions
         internal static DataTable ToDataTable<TEntity>(this DbContext context, IEnumerable<TEntity> entities, bool primaryKeysOnly = false) where TEntity : class
         {
             var tb = context.CreateDataTable<TEntity>(primaryKeysOnly);
-            var tableColumns = context.GetTableColumns<TEntity>().ToList();
+            var tableColumns = primaryKeysOnly
+                ? context.GetTablePKs<TEntity>().ToList()
+                : context.GetTableColumns<TEntity>().ToList();
             var props = typeof(TEntity).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             foreach (var item in entities)
@@ -59,8 +61,7 @@ namespace EntityFramework.BulkExtensions.Extensions
         private static DataTable CreateDataTable<TEntity>(this DbContext context, bool primaryKeysOnly = false) where TEntity : class
         {
             var table = new DataTable();
-            var columns = context.GetTableColumns<TEntity>();
-            columns = primaryKeysOnly ? columns.Where(map => map.IsPk) : columns;
+            var columns = primaryKeysOnly ? context.GetTablePKs<TEntity>() : context.GetTableColumns<TEntity>();
             foreach (var prop in columns)
             {
                 table.Columns.Add(prop.ColumnName, Nullable.GetUnderlyingType(prop.Type) ?? prop.Type);

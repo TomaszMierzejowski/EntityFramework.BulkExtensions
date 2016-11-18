@@ -54,11 +54,11 @@ namespace EntityFramework.BulkExtensions.BulkOperations
 
                     var tmpOutputTableName = context.RandomTableName<TEntity>();
                     //Copy data from temporary table to destination table with ID output to another temporary table.
-                    var commandText = context.GetInsertIntoStagingTableCmd<TEntity>(tmpOutputTableName, tmpTableName, context.GetTablePKs<TEntity>().First());
+                    var commandText = context.GetInsertIntoStagingTableCmd<TEntity>(tmpOutputTableName, tmpTableName, context.GetTablePKs<TEntity>().First().ColumnName);
                     database.ExecuteSqlCommand(commandText);
 
                     //Load generated IDs from temporary output table into the entities.
-                    database.LoadFromTmpOutputTable(tmpOutputTableName, context.GetTablePKs<TEntity>().First(), entityList);
+                    database.LoadFromTmpOutputTable(tmpOutputTableName, context.GetTablePKs<TEntity>().First().ColumnName, entityList);
                 }
                 else
                 {

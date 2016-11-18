@@ -39,8 +39,7 @@ namespace EntityFramework.BulkExtensions.Helpers
         /// <returns></returns>
         internal static string BuildCreateTempTable<TEntity>(this DbContext context, string tableName, bool primaryKeysOnly = false) where TEntity : class
         {
-            var columns = context.GetTableColumns<TEntity>();
-            columns = primaryKeysOnly ? columns.Where(map => map.IsPk) : columns;
+            var columns = primaryKeysOnly ? context.GetTablePKs<TEntity>() : context.GetTableColumns<TEntity>();
             var command = new StringBuilder();
 
             command.Append($"CREATE TABLE {tableName}(");
@@ -123,11 +122,11 @@ namespace EntityFramework.BulkExtensions.Helpers
             var updateOn = context.GetTablePKs<TEntity>().ToList();
             var command = new StringBuilder();
 
-            command.Append($"ON [{Constants.Target}].[{updateOn.First()}] = [{Constants.Source}].[{updateOn.First()}] ");
+            command.Append($"ON [{Constants.Target}].[{updateOn.First().ColumnName}] = [{Constants.Source}].[{updateOn.First().ColumnName}] ");
 
             if (updateOn.Count > 1)
                 foreach (var key in updateOn.Skip(1))
-                    command.Append($"AND [{Constants.Target}].[{key}] = [{Constants.Source}].[{key}]");
+                    command.Append($"AND [{Constants.Target}].[{key.ColumnName}] = [{Constants.Source}].[{key.ColumnName}]");
 
             return command.ToString();
         }

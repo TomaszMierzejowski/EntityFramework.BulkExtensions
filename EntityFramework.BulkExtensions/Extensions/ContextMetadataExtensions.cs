@@ -28,10 +28,10 @@ namespace EntityFramework.BulkExtensions.Extensions
         /// <param name="context"></param>
         /// <typeparam name="TEntity"></typeparam>
         /// <returns></returns>
-        internal static IEnumerable<string> GetTablePKs<TEntity>(this DbContext context) where TEntity : class
+        internal static IEnumerable<IPropertyMap> GetTablePKs<TEntity>(this DbContext context) where TEntity : class
         {
             var entityMap = context.Db<TEntity>();
-            return entityMap.Pks.Select(map => map.ColumnName);
+            return entityMap.Pks;
         }
 
         /// <summary>
