@@ -6,10 +6,10 @@ It works as extension methods of the DBContext class. It supports transaction if
 
 Exemple usage:
 
-var entityList = new IList<MyEntity>();<br>
-entityList.Add(new Myentity());<br>
-entityList.Add(new Myentity());<br>
-entityList.Add(new Myentity());<br>
+var entityList = new List\<MyEntity\>();<br>
+entityList.Add(new MyEntity());<br>
+entityList.Add(new MyEntity());<br>
+entityList.Add(new MyEntity());<br>
 
 //Bulk insert extension method<br>
 context.BulkInsert(entityList); 
