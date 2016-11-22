@@ -1,11 +1,11 @@
 # EntityFramework.BulkExtensions
 
-This project was built as an extension to add bulk operations functionality to the Entity Framework. 
-It works as extension methods of the DBContext class and is very simple to use. It supports transaction if the context's database have a CurrentTransaction, or it creates an internal one for the scope of the operation. 
-
+   This project was built as an extension to add bulk operations functionality to the Entity Framework. 
+It works as extension methods of the DBContext class and is very simple to use. It supports transaction if the context's database have a CurrentTransaction, or it creates an internal one for the scope of the operation. It relies on the SqlBulkCopy class to perform all the operations.
 ##How to use it
 
 ###Bulk insert
+   There is two ways of using this method. By only using the list as parameters for this extension method it will perform a standard SqlBulkCopy operation, witch will not return the Ids of the inserted entities because of a limitation of the SqlBulkCopy class. By also selecting Identity.InputOutput as the second parameter, the method will fill the generated Ids for the entities inserted, using temporary tables to output and select the generated Ids under the hood. See the exemples below:
 ```c#
 using EntityFramework.BulkExtensions.Operations
 
