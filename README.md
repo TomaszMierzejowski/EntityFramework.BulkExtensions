@@ -1,5 +1,4 @@
 # EntityFramework.BulkExtensions
------------------------------
 
 This project was built as an extension to add bulk operations functionality to the Entity Framework. 
 It works as extension methods of the DBContext class and is very simple to use. It supports transaction if the context's database have a CurrentTransaction, or it creates an internal one for the scope of the operation. 
@@ -35,7 +34,9 @@ using EntityFramework.BulkExtensions.Operations
 Random rnd = new Random();
 
 //Read some entities from database.
-var entityList = context.Set<MyEntity>().toList();
+var entityList = context.Set<MyEntity>()
+   .Where(entity => entity.Owner == "Steve")
+   .ToList();
 foreach(var entity in entityList) 
 {
     //Replace the old value with some random new value.
@@ -45,18 +46,17 @@ foreach(var entity in entityList)
 //Bulk update extension method
 context.BulkUpdate(entityList); 
 
-/* Under the hood, this operation will create a mirror table of your entity's table, bulk insert the updated 
-   entities using the SqlBulkCopy class, use the MERGE sql command to transfer the data to the original entity 
-   table using the primary keys to match entries and then drop the mirror table. The original course of action of the 
-   entity framework would be create an UPDATE command for each entity, wich suffers a big performance hit with an increased
-   number of entities. */
+/* Under the hood, this operation will create a mirror table of your entity's table, 
+   bulk insert the updated entities using the SqlBulkCopy class, use the MERGE sql 
+   command to transfer the data to the original entity table using the primary keys 
+   to match entries and then drop the mirror table. The original course of action of 
+   the entity framework would be create an UPDATE command for each entity, wich suffers 
+   a big performance hit with an increased number of entries to update. */
 ```
    
 ###Bulk delete
 ```c#
 using EntityFramework.BulkExtensions.Operations
-
-Random rnd = new Random();
 
 //Read some entities from database.
 var entityList = context.Set<MyEntity>()
@@ -66,5 +66,5 @@ var entityList = context.Set<MyEntity>()
 //Bulk delete extension method
 context.BulkDelete(entityList); 
 
-/* This operation will delete from database. */
+/* This operation will delete all the entities in the list from the database. */
 
