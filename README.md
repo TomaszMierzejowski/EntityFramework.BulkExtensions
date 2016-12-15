@@ -4,6 +4,12 @@
 It works as extension methods of the DBContext class and is very simple to use. It supports transaction if the context's database have a CurrentTransaction, or it creates an internal one for the scope of the operation.
 <br><br>
    It relies on the SqlBulkCopy class to perform all the operations, because of that, it can't handle navigation properties and will not persist relationships between entities, but there is a workaround for that if the foreign keys are being explicitly mapped in your model classes. See the workaround in the examples below.
+   
+   
+###Installation
+You can install it using the
+<a href="https://www.nuget.org/packages/EntityFramework.BulkExtensions">nuget package</a><br>
+
 ##How to use it
 
 ###Bulk insert
