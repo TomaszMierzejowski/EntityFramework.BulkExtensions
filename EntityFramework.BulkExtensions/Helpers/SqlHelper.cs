@@ -69,6 +69,11 @@ namespace EntityFramework.BulkExtensions.Helpers
                 var bulkcopy = new SqlBulkCopy((SqlConnection)context.Connection, sqlBulkCopyOptions,
                     (SqlTransaction)context.CurrentTransaction.UnderlyingTransaction))
             {
+                foreach (var dataTableColumn in dataTable.Columns)
+                {
+                    bulkcopy.ColumnMappings.Add(dataTableColumn.ToString(), dataTableColumn.ToString());
+                }
+
                 bulkcopy.DestinationTableName = tableName;
                 bulkcopy.BulkCopyTimeout = context.Connection.ConnectionTimeout;
                 bulkcopy.WriteToServer(dataTable);
